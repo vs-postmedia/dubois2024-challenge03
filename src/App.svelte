@@ -2,73 +2,46 @@
     // COMPONENTS
     import { onMount } from 'svelte';
     import { csvParse } from 'd3-dsv';
-    import Example from "$components/Example.svelte";
     import Chart from "$components/Chart.svelte";
-    import Select from "svelte-select"; // https://github.com/rob-balfre/svelte-select
 
     // DATA
-    // import data from "$data/data.js";
-    import { menuItems } from "$data/menu-items";
-    const dataUrl = '';
+    const dataUrl = 'https://raw.githubusercontent.com/ajstarks/dubois-data-portraits/master/challenge/2024/challenge03/data.csv';
 
     // VARIABLES
     let data, value;
-    const defaultSelectValue = menuItems[0].value;
 
     // REACTIVE VARIABLES
-    $: value, updateData(value);
+    
 
     async function fetchData(url) {
         const resp = await fetch(url);
-        data = await resp.text();
+        const data = await resp.text();
         return csvParse(data);
     }
 
 
-    function updateData(value) {
-        if (!value || !value.value) return;
-
-        console.log(value);
-    }
-
     async function init() {
-        console.log("INIT!");
-
-        // fetch remote data
-        // data = await fetchData(dataUrl);
-        // console.log(data)
-
-        // default display selector value
-		value = defaultSelectValue;
+        // fetch data
+        data = await fetchData(dataUrl);
     }
 
+    // build the chart
     onMount(init);
 </script>
 
 <header>
-    <h1>VS SvelteKit Template</h1>
-    <p class="subhead">Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+    <h1>DuBois Data Portraits</h1>
+    <p class="subhead">Challenge #3. Visit the <a target="_blank" href="https://www.datavisualizationsociety.org/news/2024/2/2/advance-your-data-viz-skills-with-the-weekly-2024-du-bois-visualization-challenge">Data visualization Society</a> for more information.</p>
 </header>
 
 <main>
-    <Select items={menuItems}
-        bind:value
-        change={updateData}
-        placeholder="Pick a city..."
-		showChevron="true"
-		listOpen={false}
-    />
-    
-    <Chart 
-        data={data}
-        value={value}
-    />
+    {#if data}
+        <Chart 
+            data={data.sort((a,b) => parseFloat(b.Date) - parseFloat(a.Date))}
+            value={value}
+        />
+    {/if}
 </main>
-
-<footer>
-    <p class="note">NOTE: tk.</p>
-    <p class="source">Source:  <a href="https:vancouversun.com" target="_blank">TK</a></p>
-</footer>
   
 <style>
     @import '$css/normalize.css';
@@ -76,13 +49,13 @@
     @import '$css/colors.css';
     @import '$css/app.css';
 
-    #header {
+    header {
 		margin-bottom: 2rem;
 	}
-	#header > h1 {
+	header > h1 {
 		text-align: center;
 	}
-	#header .subhead {
+	header .subhead {
 		margin: 0 auto;
 		max-width: 525px;
 		text-align: center;
