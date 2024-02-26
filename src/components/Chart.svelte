@@ -8,17 +8,20 @@
     import { onMount } from 'svelte';
     import { max } from 'd3-array';
     import { scaleBand, scaleLinear } from 'd3-scale';
-    // import { RoughSVG, RoughLine } from 'svelte-rough';
+    
+    // COMPONENTS
+    import Tooltip from '$components/Tooltip.svelte';
 
     // DATA
-    import backgroundImage from "$images/plate-background.jpg";
+    import backgroundImage from "$images/plate-background.jpg"
 	
 
     // VARS
+    let tooltipData;
     let width = 600;
-    let height = 800;    
+    let height = 800;
     let roughSvg, svg, xExtent, xMax, xScale, yScale;
-    const svgContainerId = 'chart';
+    const svgContainerId = 'inner-chart';
     const margin = {
 		top: 0,
 		right: 100,
@@ -44,12 +47,33 @@
     };
 
     // FUNCTIONS
-    function addBarLabel(data) {
-        console.log(data);
+    function addBarLabel(d, index, svg) {
+        // create a new text element
+        let text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        // set text attributes
+        if (index !== 0) {
+            text.setAttribute('x', xScale(d.Land) / 1.5);
+        } else {
+            text.setAttribute('x', xScale(d.Land) / 2);
+        }
+        text.setAttribute('y', yScale(d.Date) + yScale.bandwidth() / 2);
+        text.setAttribute('dy', '0.25rem');
+        text.setAttribute('text-anchor', 'center');
+        text.setAttribute('font-family', 'BentonSansCond-Bold');
+        text.textContent = addCommasToNumber(parseFloat(d.Land));
+        svg.appendChild(text);
     }
 
     function addCommasToNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    function highlightBar(rect) {
+        const bars = document.querySelectorAll(`${svgContainerId} g > path`);
+
+        bars.forEach(d => {
+            d.classList.add('non-active');
+        })
     }
 
     $: createRoughPaths = function(d, data, index, fillOptions) {
@@ -57,25 +81,33 @@
 
         // draw bars
         const rect = roughSvg.rectangle(50, yScale(d.Date), xScale(d.Land), barHeight, fillOptions);
+        // add properties object for mouseover events
+        rect.properties = d;
+        // add classes
+        rect.setAttribute('class', 'bar');
+        rect.setAttribute('transition', 'opacity 0.3s ease-in-out;');
+
+        // add tooltip
+        rect.addEventListener('mouseover', e => {
+            rect.properties.x = e.layerX;
+            rect.properties.y = e.layerY;
+    
+            tooltipData = rect.properties;
+
+            rect.setAttribute('opacity', '0.3');
+        });
+
+        rect.addEventListener('mouseout', e => {
+            tooltipData = null;
+            rect.setAttribute('opacity', '1');
+        })
+
+        // add rect to svg
         svg.appendChild(rect);
 
-        // append text
+        // append text on first & last bars
         if (index === 0 || index === data.length - 1) {
-            // create a new text element
-            let text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            // set text attributes
-            if (index !== 0) {
-                text.setAttribute('x', xScale(d.Land) / 1.5);
-            } else {
-                text.setAttribute('x', xScale(d.Land) / 2);
-            }
-            text.setAttribute('y', yScale(d.Date) + yScale.bandwidth() / 2);
-            text.setAttribute('dy', '0.25rem');
-            text.setAttribute('text-anchor', 'center');
-            text.setAttribute('font-family', 'BentonSansCond-Bold');
-            text.textContent = addCommasToNumber(parseFloat(d.Land));
-            svg.appendChild(text);
-            console.log(text)
+           addBarLabel(d, index, svg);
         }
     }
 
@@ -107,7 +139,7 @@
     <h2 id="viz-header">Acres of land owned by Blacks in Georgia.</h2>
 
     <svg id="chart" {height} {width}>
-        <g class="inner-chart" transform={`translate(${margin.left}, ${margin.top})`}>
+        <g id="inner-chart" transform={`translate(${margin.left}, ${margin.top})`}>
             {#each data as d, i}
                 <g class="axis-y" dy="100">
                     <text
@@ -122,6 +154,9 @@
             {/each}
         </g>
     </svg>
+    {#if tooltipData}
+        <Tooltip data={tooltipData} width={innerWidth} />
+    {/if}
 </div>
 
 <style>
@@ -149,5 +184,12 @@
         letter-spacing: 0.015rem;
         line-height: 1.75rem;
         text-transform: uppercase;
+    }
+    #chart .active {
+        opacity: 1
+    }
+
+    #chart .bar > path:hover {
+        opacity: 0.3;
     }
 </style>

@@ -4,7 +4,7 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/svelte-template/',
+  base: '/dubois-challenge-03/',
   plugins: [svelte()],
   resolve: {
     alias: {
